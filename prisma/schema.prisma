@@ -1,0 +1,48 @@
+// Prisma Schema for Event Management
+// Key decisions:
+// - Using cuid() for better distributed IDs
+// - Cascade delete: when event is deleted, attendees are removed
+// - Unique constraint on (email, eventId) to prevent duplicate registrations
+// - DateTime for events to support future scheduling
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Database connection is now configured in prisma.config.ts (Prisma v7)
+   url      = env("DATABASE_URL")
+}
+
+model Event {
+  id          String     @id @default(cuid())
+  title       String
+  date        DateTime
+  description String?    @db.Text
+  capacity    Int
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  attendees   Attendee[]
+
+  // Indexes & table mapping
+  @@index([date])
+  @@map("events")
+}
+
+model Attendee {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Constraints & indexes
+  @@unique([email, eventId], name: "unique_attendee_per_event")
+  @@index([eventId])
+  @@map("attendees")
+}
